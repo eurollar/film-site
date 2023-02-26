@@ -1,0 +1,57 @@
+version: '3.9'
+
+networks:
+  wordpress:
+
+services:
+  site:
+    image: nginx:stable-alpine
+    container_name: wp_nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./test-theme:/var/www/html
+    depends_on:
+      - php
+      - mariadb
+    networks:
+      - wordpress
+
+  mariadb:
+    image: mariadb:10.9
+    container_name: wp_mariadb
+    ports:
+      - 3306:3306
+    volumes:
+      - ./mariadb:/var/lib/mariadb
+    env_file: ./.env
+    networks:
+      - wordpress
+
+  php:
+    image: wordpress:6.1-fpm
+    container_name: wp_wp
+    env_file: ./.env
+    user: ${MY_UID}:${MY_GID}
+    volumes:
+      - ./test-theme:/var/www/html
+      - ./test-theme/wp-content:/var/www/html/wp-content
+    networks:
+      - wordpress
+
+  wordpress_toolbox:
+    build:
+      context: ./wp-cli
+      dockerfile: Dockerfile
+    volumes:
+      - ./test-theme:/wordpress
+    working_dir: /wordpress
+    depends_on:
+      - php
+      - mariadb
+      - site
+    user: ${MY_UID}:${MY_GID}
+    env_file: ./.env
+    networks:
+      - wordpress
